@@ -1,1 +1,5 @@
-crypto_mappings = {"coinbase": {"BTC": "BTC-USD"}}
+crypto_mappings = {
+    "coinbase": {"BTC": "BTC-USD"},
+    "kraken": {"BTC": "XBTUSD"},
+    "gemini": {"BTC": "BTCUSD"},
+}

@@ -1,14 +1,14 @@
-from config import COINBASE_URL
+from config import GEMINI_URL
 from .exchange_interface import ExchangeInterface
 from .utils import make_request as request_helper
 from .mappings import crypto_mappings
 
 
-MAPPINGS = crypto_mappings["coinbase"]
+MAPPINGS = crypto_mappings["gemini"]
 
 
-class Coinbase(ExchangeInterface):
-    __base_url = COINBASE_URL
+class Gemini(ExchangeInterface):
+    __base_url = GEMINI_URL
 
     def __init__(self, crypto_pair):
         self.crypto_pair = crypto_pair
@@ -16,7 +16,7 @@ class Coinbase(ExchangeInterface):
     async def get_bid_price(self):
         response = await self.make_request()
         response = [
-            {"price": float(bid[0]), "amount": float(bid[1])}
+            {"price": float(bid["price"]), "amount": float(bid["amount"])}
             for bid in response["bids"]
         ]
         return response
@@ -24,12 +24,12 @@ class Coinbase(ExchangeInterface):
     async def get_ask_price(self):
         response = await self.make_request()
         response = [
-            {"price": float(ask[0]), "amount": float(ask[1])}
+            {"price": float(ask["price"]), "amount": float(ask["amount"])}
             for ask in response["asks"]
         ]
         return response
 
     async def make_request(self):
-        complete_url = Coinbase.__base_url.format(MAPPINGS[self.crypto_pair])
+        complete_url = Gemini.__base_url.format(MAPPINGS[self.crypto_pair])
         result = await request_helper(complete_url)
         return result
