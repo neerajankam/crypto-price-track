@@ -1,4 +1,4 @@
-from config import COINBASE_URL
+from config import COINBASE_PRICE_URL
 from .exchange_interface import ExchangeInterface
 from .utils import make_request as request_helper
 from .mappings import crypto_mappings
@@ -8,7 +8,7 @@ MAPPINGS = crypto_mappings["coinbase"]
 
 
 class Coinbase(ExchangeInterface):
-    __base_url = COINBASE_URL
+    __base_url = COINBASE_PRICE_URL
 
     def __init__(self, crypto_pair):
         self.crypto_pair = crypto_pair

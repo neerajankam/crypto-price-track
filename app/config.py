@@ -1,3 +1,8 @@
-COINBASE_URL = "https://api.pro.coinbase.com/products/{}/book?level=2"
-GEMINI_URL = "https://api.gemini.com/v1/book/{}"
-KRAKEN_URL = "https://api.kraken.com/0/public/Depth?pair={}"
+COINBASE_PRICE_URL = "https://api.pro.coinbase.com/products/{}/book?level=2"
+GEMINI_PRICE_URL = "https://api.gemini.com/v1/book/{}"
+KRAKEN_PRICE_URL = "https://api.kraken.com/0/public/Depth?pair={}"
+
+
+COINBASE_ASSETS_URL = "https://api.exchange.coinbase.com/products"
+GEMINI_ASSETS_URL = "https://api.gemini.com/v1/symbols"
+KRAKEN_ASSETS_URL = "https://api.kraken.com/0/public/AssetPairs"

@@ -1,4 +1,4 @@
-from config import KRAKEN_URL
+from config import KRAKEN_PRICE_URL
 from .exchange_interface import ExchangeInterface
 from .utils import make_request as request_helper
 from .mappings import crypto_mappings
@@ -8,7 +8,7 @@ MAPPINGS = crypto_mappings["kraken"]
 
 
 class Kraken(ExchangeInterface):
-    __base_url = KRAKEN_URL
+    __base_url = KRAKEN_PRICE_URL
 
     def __init__(self, crypto_pair):
         self.crypto_pair = crypto_pair
