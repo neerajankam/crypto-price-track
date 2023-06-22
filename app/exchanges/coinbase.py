@@ -1,17 +1,26 @@
-from config import COINBASE_PRICE_URL
+from config import COINBASE_PRICE_URL, COINBASE_ASSETS_URL
 from .exchange_interface import ExchangeInterface
 from .utils import make_request as request_helper
-from .mappings import crypto_mappings
-
-
-MAPPINGS = crypto_mappings["coinbase"]
+from .supported_cryptos import names
 
 
 class Coinbase(ExchangeInterface):
     __base_url = COINBASE_PRICE_URL
+    __assets_url = COINBASE_ASSETS_URL
+    __assets = None
 
     def __init__(self, crypto_pair):
         self.crypto_pair = crypto_pair
+
+    @classmethod
+    async def get_assets(cls):
+        response = await request_helper(Coinbase.__assets_url)
+        assets = {}
+        for asset in response:
+            if asset["base_currency"] in names and asset["quote_currency"] == "USD":
+                assets[asset["base_currency"]] = asset["id"]
+        cls.__assets = assets
+        return cls.__assets
 
     async def get_bid_price(self):
         response = await self.make_request()
@@ -30,6 +39,6 @@ class Coinbase(ExchangeInterface):
         return response
 
     async def make_request(self):
-        complete_url = Coinbase.__base_url.format(MAPPINGS[self.crypto_pair])
+        complete_url = Coinbase.__base_url.format(Coinbase.__assets[self.crypto_pair])
         result = await request_helper(complete_url)
         return result
