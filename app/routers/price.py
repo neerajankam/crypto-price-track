@@ -1,52 +1,41 @@
-import os
-import json
-
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
 import requests
 
-from exchanges.coinbase import Coinbase
-from exchanges.kraken import Kraken
-from exchanges.gemini import Gemini
-from models.schemas import Item
-from .utils import compute_total_price
+from models.schemas import Crypto
+from .utils import get_buying_selling_prices, FetchAssetsError, FetchPricesError
+from slowapi.errors import RateLimitExceeded
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
-@router.get("/prices/{item}")
-async def get_prices(item: Item, quantity: str):
-    buying_price, selling_price = await get_buying_selling_prices(item, quantity)
-
+@router.get("/prices/{crypto}")
+@limiter.limit("5/minute")
+async def get_prices(request: Request, crypto: Crypto, quantity: str) -> dict:
+    """
+    Retrieves the buying and selling prices for a given cryptocurrency.
+    Rate limit is 5 requests per minute
+    :param crypto: The cryptocurrency.
+    :type crypto: Crypto
+    :param quantity: The quantity of the cryptocurrency.
+    :type quantity: str
+    :return: A dictionary containing the crypto, quantity, buying price, and selling price
+    if no error is encountered. Else it returns the error message and 500 status code.
+    :rtype: dict
+    """
+    try:
+        buying_price, selling_price = await get_buying_selling_prices(crypto, quantity)
+    except FetchAssetsError as e:
+        return Response(content=str(e), status_code=500)
+    except FetchPricesError as e:
+        return Response(content=str(e), status_code=500)
     return {
-        "Crypto": item,
+        "Crypto": crypto,
         "Quantity": quantity,
         "Buying price": buying_price,
         "Selling price": selling_price,
     }
-
-
-async def get_buying_selling_prices(item, quantity):
-    coinbase_assets = await Coinbase.get_assets()
-    gemini_assets = await Gemini.get_assets()
-    kraken_assets = await Kraken.get_assets()
-
-    exchanges = []
-    if item in coinbase_assets:
-        exchanges.append(Coinbase(item))
-    if item in gemini_assets:
-        exchanges.append(Gemini(item))
-    if item in kraken_assets:
-        exchanges.append(Kraken(item))
-    asks = []
-    bids = []
-    for exchange in exchanges:
-        bids.extend(await exchange.get_bid_price())
-        asks.extend(await exchange.get_ask_price())
-
-    bids.sort(key=lambda x: x["price"], reverse=True)
-    asks.sort(key=lambda x: x["price"])
-
-    buying_price = compute_total_price(asks, quantity)
-    selling_price = compute_total_price(bids, quantity)
-    return buying_price, selling_price

@@ -1,17 +1,20 @@
 # Crypto price tracker
 A simple FastAPI backend to fetch the buying and selling prices of cryptocurrencies from exchanges like Coinbase, Kraken and Gemini.
 
+
 ## API Endpoints
 
 #### Fetch buying and selling price of cryptocurrency.
 
 ```http
-GET /prices?{$item}
+GET /prices/{$crypto}?{$quantity}
 ```
 
 | Parameter | Type     | Description                |
 | :-------- | :------- | :------------------------- |
-| `item` | `string` | capitalized string denoting crypto ticker(Ex: BTC) **Required**.|
+| `crypto` | `string` | capitalized string denoting crypto ticker(Ex: BTC) **required**.|
+`quantity` | `string` | The quantity of the cryptocurrency. **required**
+
 
 
 ## Requirements
@@ -56,23 +59,25 @@ uvicorn main:app --reload
 ├── LICENSE
 ├── README.md
 ├── __init__.py
-├── app
+├── app (Application modules)
 │   ├── __init__.py
-│   ├── config.py
 │   ├── exchanges
 │   │   ├── __init__.py
 │   │   ├── coinbase.py
 │   │   ├── exchange_interface.py
 │   │   ├── gemini.py
 │   │   ├── kraken.py
-│   │   ├── supported_cryptos.py
 │   │   └── utils.py
 │   ├── main.py
-│   └── routers
-│       ├── __init__.py
-│       ├── price.py
-│       └── utils.py
-├── models
+│   ├── routers
+│   │   ├── __init__.py
+│   │   ├── price.py
+│   │   └── utils.py
+│   ├── supported_cryptos.py
+│   └── urls.py
+├── logger (Logger modules)
+│   └── app_logger.py
+├── models (Application models)
 │   └── schemas.py
 └── requirements.txt
 ```

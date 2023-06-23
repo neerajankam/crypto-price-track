@@ -3,7 +3,7 @@ from enum import Enum
 from fastapi import FastAPI
 
 
-class Item(str, Enum):
+class Crypto(str, Enum):
     BTC = "BTC"
     ETH = "ETH"
     SOL = "SOL"
