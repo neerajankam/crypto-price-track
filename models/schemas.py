@@ -9,6 +9,6 @@ class Crypto(str, Enum):
     LRC = "LRC"
 
 
-class PriceType(str, Enum):
+class ViewType(str, Enum):
     individual = "individual"
     consolidated = "consolidated"

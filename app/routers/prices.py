@@ -1,8 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
-import requests
 
-from models.schemas import Crypto, PriceType
+from models.schemas import Crypto, ViewType
 from .utils import (
     get_consolidated_prices,
     get_all_exchanges_prices,
@@ -10,7 +9,7 @@ from .utils import (
     FetchPricesError,
 )
 from slowapi.errors import RateLimitExceeded
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 
@@ -21,7 +20,7 @@ limiter = Limiter(key_func=get_remote_address)
 @router.get("/prices/{crypto}")
 @limiter.limit("5/minute")
 async def get_prices(
-    request: Request, crypto: Crypto, quantity: str, price_type: PriceType
+    request: Request, crypto: Crypto, quantity: str, view: ViewType
 ) -> dict:
     """
     Retrieves the buying and selling prices for a given cryptocurrency.
@@ -34,7 +33,7 @@ async def get_prices(
     if no error is encountered. Else it returns the error message and 500 status code.
     :rtype: dict
     """
-    if price_type == PriceType.consolidated:
+    if view == ViewType.consolidated:
         try:
             buying_price, selling_price = await get_consolidated_prices(
                 crypto, quantity
@@ -49,7 +48,7 @@ async def get_prices(
             "Buying price": buying_price,
             "Selling price": selling_price,
         }
-    elif price_type == PriceType.individual:
+    elif view == ViewType.individual:
         try:
             prices = await get_all_exchanges_prices(crypto, quantity)
         except FetchAssetsError as e:

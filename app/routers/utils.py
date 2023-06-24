@@ -1,7 +1,9 @@
 from exchanges.coinbase import Coinbase
+from exchanges.exchange_interface import ExchangeInterface
 from exchanges.kraken import Kraken
 from exchanges.gemini import Gemini
 from logger.app_logger import logger
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 
 EXCHANGE_MAP = {
@@ -11,12 +13,22 @@ EXCHANGE_MAP = {
 }
 
 
-async def get_consolidated_prices(crypto, quantity):
+async def get_consolidated_prices(crypto: str, quantity: float) -> Tuple[float, float]:
+    """
+    Get consolidated buying and selling prices across all supported exchanges.
+
+    :param crypto: The cryptocurrency.
+    :type crypto: str
+    :param quantity: The quantity.
+    :type quantity: float
+    :return: The buying price and selling price.
+    :rtype: Tuple[float, float]
+    """
     exchanges = await get_supported_exchanges(crypto)
 
     for exchange in exchanges:
-        bids = [await get_sorted_exchange_prices(exchange, crypto, True)]
-        asks = [await get_sorted_exchange_prices(exchange, crypto, False)]
+        bids = await get_sorted_exchange_prices(exchange, crypto, True)
+        asks = await get_sorted_exchange_prices(exchange, crypto, False)
 
     buying_price = compute_total_price(asks, quantity)
     selling_price = compute_total_price(bids, quantity)
@@ -24,9 +36,21 @@ async def get_consolidated_prices(crypto, quantity):
     return buying_price, selling_price
 
 
-async def get_all_exchanges_prices(crypto, quantity):
+async def get_all_exchanges_prices(
+    crypto: str, quantity: float
+) -> Dict[str, Dict[str, Any]]:
+    """
+    Get prices from all supported exchanges.
+
+    :param crypto: The cryptocurrency.
+    :type crypto: str
+    :param quantity: The quantity.
+    :type quantity: float
+    :return: The prices from all exchanges.
+    :rtype: Dict[str, Dict[str, Any]]
+    """
     exchanges = await get_supported_exchanges(crypto)
-    response = create_initial_response()
+    response = empty_prices_response()
 
     for exchange in exchanges:
         if exchange in EXCHANGE_MAP:
@@ -44,7 +68,38 @@ async def get_all_exchanges_prices(crypto, quantity):
     return response
 
 
-async def get_supported_exchanges(crypto):
+async def get_all_exchanges_trades(crypto: str, limit: int) -> Dict[str, Any]:
+    """
+    Get trades from all supported exchanges.
+
+    :param crypto: The cryptocurrency.
+    :type crypto: str
+    :param limit: The limit.
+    :type limit: int
+    :return: The trades from all exchanges.
+    :rtype: Dict[str, Any]
+    """
+    import copy
+
+    exchanges = await get_supported_exchanges(crypto)
+    trades = {}
+    for exchange in exchanges:
+        if exchange in EXCHANGE_MAP:
+            exchange_key = EXCHANGE_MAP[exchange]
+            response = await exchange(crypto).get_trades(limit)
+            trades[exchange_key] = copy.deepcopy(response)
+    return trades
+
+
+async def get_supported_exchanges(crypto: str) -> List[Type[ExchangeInterface]]:
+    """
+    Get the supported exchanges for a given cryptocurrency.
+
+    :param crypto: The cryptocurrency.
+    :type crypto: str
+    :return: The supported exchanges.
+    :rtype: List[Type[ExchangeInterface]]
+    """
     try:
         assets = await get_assets()
     except Exception:
@@ -61,7 +116,13 @@ async def get_supported_exchanges(crypto):
     return exchanges
 
 
-async def get_assets():
+async def get_assets() -> Dict[str, Dict[str, Any]]:
+    """
+    Get the assets from all exchanges.
+
+    :return: The assets from all exchanges.
+    :rtype: Dict[str, Dict[str, Any]]
+    """
     assets = {}
     for exchange in EXCHANGE_MAP:
         exchange_name = EXCHANGE_MAP[exchange]
@@ -69,7 +130,20 @@ async def get_assets():
     return assets
 
 
-def compute_total_price(offers, required_quantity):
+def compute_total_price(
+    offers: List[Dict[str, Any]], required_quantity: float
+) -> float:
+    """
+    Compute the total price based on the offers and required quantity.
+
+    :param offers: The offers.
+    :type offers: List[Dict[str, Any]]
+    :param required_quantity: The required quantity.
+    :type required_quantity: float
+    :return: The total price.
+    :rtype: float
+    """
+    print(offers)
     quantity_so_far = 0
     total_price = 0
     required_quantity = float(required_quantity)
@@ -86,7 +160,13 @@ def compute_total_price(offers, required_quantity):
     return total_price
 
 
-def create_initial_response():
+def empty_prices_response() -> Dict[str, Dict[str, Optional[float]]]:
+    """
+    Create an empty prices response.
+
+    :return: The empty prices response.
+    :rtype: Dict[str, Dict[str, Optional[float]]]
+    """
     return {
         "coinbase": {"buying_price": None, "selling_price": None},
         "gemini": {"buying_price": None, "selling_price": None},
@@ -94,7 +174,31 @@ def create_initial_response():
     }
 
 
-async def get_sorted_exchange_prices(exchange, crypto, is_buying_price):
+def empty_trades_response() -> Dict[str, Optional[List[Dict[str, Any]]]]:
+    """
+    Create an empty trades response.
+
+    :return: The empty trades response.
+    :rtype: Dict[str, Optional[List[Dict[str, Any]]]]
+    """
+    return {"coinbase": None, "gemini": None}
+
+
+async def get_sorted_exchange_prices(
+    exchange: Type[ExchangeInterface], crypto: str, is_buying_price: bool
+) -> List[Dict[str, Any]]:
+    """
+    Get sorted exchange prices for a given cryptocurrency.
+
+    :param exchange: The exchange.
+    :type exchange: Type[ExchangeInterface]
+    :param crypto: The cryptocurrency.
+    :type crypto: str
+    :param is_buying_price: Indicates whether it's a buying price or not.
+    :type is_buying_price: bool
+    :return: The sorted exchange prices.
+    :rtype: List[Dict[str, Any]]
+    """
     try:
         prices = (
             await exchange(crypto).get_bid_price()
@@ -110,7 +214,15 @@ async def get_sorted_exchange_prices(exchange, crypto, is_buying_price):
     return prices
 
 
-def sort_prices(prices, reverse=False):
+def sort_prices(prices: List[Dict[str, Any]], reverse: bool = False) -> None:
+    """
+    Sort the prices.
+
+    :param prices: The prices.
+    :type prices: List[Dict[str, Any]]
+    :param reverse: Indicates whether to sort in reverse order or not.
+    :type reverse: bool, optional
+    """
     prices.sort(key=lambda x: x["price"], reverse=reverse)
 
 

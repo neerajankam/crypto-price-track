@@ -1,14 +1,15 @@
-from urls import COINBASE_PRICE_URL, COINBASE_ASSETS_URL
+from urls import COINBASE_PRICE_URL, COINBASE_ASSETS_URL, COINBASE_TRADES_URL
 from .exchange_interface import ExchangeInterface
-from .utils import make_request as request_helper
+from .utils import make_request as request_helper, structure_coinbase
 from app.supported_cryptos import NAMES
 from logger.app_logger import logger
 from typing import List, Dict, Any
 
 
 class Coinbase(ExchangeInterface):
-    __base_url = COINBASE_PRICE_URL
+    __price_url = COINBASE_PRICE_URL
     __assets_url = COINBASE_ASSETS_URL
+    __trades_url = COINBASE_TRADES_URL
     __assets = {}
 
     def __init__(self, crypto_pair: str) -> None:
@@ -43,6 +44,22 @@ class Coinbase(ExchangeInterface):
             cls.__assets = assets
         return cls.__assets
 
+    async def get_trades(self, limit: int) -> List[Dict[str, Any]]:
+        """
+        Retrieve trades from Coinbase exchange.
+
+        :param limit: The maximum number of trades to retrieve.
+        :type limit: int
+        :return: A list of structured trades.
+        :rtype: List[Dict[str, Any]]
+        """
+        complete_url = Coinbase.__trades_url.format(
+            Coinbase.__assets[self.crypto_pair], limit
+        )
+        response = await request_helper(complete_url)
+        structured_response = structure_coinbase(response)
+        return structured_response
+
     async def get_bid_price(self) -> List[Dict[str, float]]:
         """
         Retrieves the bid prices from Coinbase.
@@ -50,7 +67,8 @@ class Coinbase(ExchangeInterface):
         :return: The bid prices.
         :rtype: List[Dict[str, float]]
         """
-        response = await self.make_request()
+        complete_url = Coinbase.__price_url.format(Coinbase.__assets[self.crypto_pair])
+        response = await request_helper(complete_url)
         response = [
             {"price": float(bid[0]), "amount": float(bid[1])}
             for bid in response["bids"]
@@ -64,26 +82,10 @@ class Coinbase(ExchangeInterface):
         :return: The ask prices.
         :rtype: List[Dict[str, float]]
         """
-        response = await self.make_request()
+        complete_url = Coinbase.__price_url.format(Coinbase.__assets[self.crypto_pair])
+        response = await request_helper(complete_url)
         response = [
             {"price": float(ask[0]), "amount": float(ask[1])}
             for ask in response["asks"]
         ]
         return response
-
-    async def make_request(self) -> Dict[str, Any]:
-        """
-        Makes a request to Coinbase to retrieve data.
-
-        :raises Exception: If an error occurs while making the request.
-
-        :return: The response data.
-        :rtype: Dict[str, Any]
-        """
-        complete_url = Coinbase.__base_url.format(Coinbase.__assets[self.crypto_pair])
-        try:
-            response = await request_helper(complete_url)
-            return response
-        except Exception:
-            logger.exception(f"Error while making request to {complete_url}")
-            raise Exception(f"Error while making request to {complete_url}")

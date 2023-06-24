@@ -10,10 +10,6 @@ class ExchangeInterface(ABC):
     def get_ask_price():
         pass
 
-    @abstractmethod
-    def make_request():
-        pass
-
     @classmethod
     def get_assets():
         pass

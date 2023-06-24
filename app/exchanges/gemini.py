@@ -1,15 +1,16 @@
-from urls import GEMINI_PRICE_URL, GEMINI_ASSETS_URL
+from urls import GEMINI_PRICE_URL, GEMINI_ASSETS_URL, GEMINI_TRADES_URL
 from .exchange_interface import ExchangeInterface
-from .utils import make_request as request_helper
+from .utils import make_request as request_helper, structure_gemini
 from app.supported_cryptos import NAMES
 from logger.app_logger import logger
 from typing import List, Dict, Any
 
 
 class Gemini(ExchangeInterface):
-    __base_url = GEMINI_PRICE_URL
+    __price_url = GEMINI_PRICE_URL
     __assets_url = GEMINI_ASSETS_URL
-    __assets = None
+    __trades_url = GEMINI_TRADES_URL
+    __assets = {}
 
     def __init__(self, crypto_pair: str) -> None:
         """
@@ -44,6 +45,22 @@ class Gemini(ExchangeInterface):
             cls.__assets = assets
         return cls.__assets
 
+    async def get_trades(self, limit: int) -> List[Dict[str, Any]]:
+        """
+        Retrieve trades from Gemini exchange.
+
+        :param limit: The maximum number of trades to retrieve.
+        :type limit: int
+        :return: A list of structured trades.
+        :rtype: List[Dict[str, Any]]
+        """
+        complete_url = Gemini.__trades_url.format(
+            Gemini.__assets[self.crypto_pair], limit
+        )
+        response = await request_helper(complete_url)
+        structured_response = structure_gemini(response)
+        return structured_response
+
     async def get_bid_price(self) -> List[Dict[str, float]]:
         """
         Retrieves the bid prices from Gemini.
@@ -51,7 +68,8 @@ class Gemini(ExchangeInterface):
         :return: The bid prices.
         :rtype: List[Dict[str, float]]
         """
-        response = await self.make_request()
+        complete_url = Gemini.__price_url.format(Gemini.__assets[self.crypto_pair])
+        response = await request_helper(complete_url)
         response = [
             {"price": float(bid["price"]), "amount": float(bid["amount"])}
             for bid in response["bids"]
@@ -65,26 +83,10 @@ class Gemini(ExchangeInterface):
         :return: The ask prices.
         :rtype: List[Dict[str, float]]
         """
-        response = await self.make_request()
+        complete_url = Gemini.__price_url.format(Gemini.__assets[self.crypto_pair])
+        response = await request_helper(complete_url)
         response = [
             {"price": float(ask["price"]), "amount": float(ask["amount"])}
             for ask in response["asks"]
         ]
         return response
-
-    async def make_request(self) -> Dict[str, Any]:
-        """
-        Makes a request to Gemini to retrieve data.
-
-        :raises Exception: If an error occurs while making the request.
-
-        :return: The response data.
-        :rtype: Dict[str, Any]
-        """
-        complete_url = Gemini.__base_url.format(Gemini.__assets[self.crypto_pair])
-        try:
-            response = await request_helper(complete_url)
-            return response
-        except Exception:
-            logger.exception(f"Error while making request to {complete_url}")
-            raise Exception(f"Error while making request to {complete_url}")
