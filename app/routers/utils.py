@@ -4,49 +4,69 @@ from exchanges.gemini import Gemini
 from logger.app_logger import logger
 
 
-async def get_buying_selling_prices(crypto, quantity):
+EXCHANGE_MAP = {
+    Coinbase: "coinbase",
+    Gemini: "gemini",
+    Kraken: "kraken",
+}
+
+
+async def get_consolidated_prices(crypto, quantity):
     exchanges = await get_supported_exchanges(crypto)
 
-    asks = []
-    bids = []
-
-    try:
-        for exchange in exchanges:
-            bids.extend(await exchange.get_bid_price())
-            asks.extend(await exchange.get_ask_price())
-    except Exception:
-        logger.exception("Encountered exception while fetching the bid and ask prices.")
-        raise FetchPricesError(
-            f"Error while fetching the bid and ask prices of {crypto.value} from exchanges."
-        )
-
-    bids.sort(key=lambda x: x["price"], reverse=True)
-    asks.sort(key=lambda x: x["price"])
+    for exchange in exchanges:
+        bids = [await get_sorted_exchange_prices(exchange, crypto, True)]
+        asks = [await get_sorted_exchange_prices(exchange, crypto, False)]
 
     buying_price = compute_total_price(asks, quantity)
     selling_price = compute_total_price(bids, quantity)
+
     return buying_price, selling_price
+
+
+async def get_all_exchanges_prices(crypto, quantity):
+    exchanges = await get_supported_exchanges(crypto)
+    response = create_initial_response()
+
+    for exchange in exchanges:
+        if exchange in EXCHANGE_MAP:
+            exchange_key = EXCHANGE_MAP[exchange]
+            buying_price = await get_sorted_exchange_prices(exchange, crypto, True)
+            selling_price = await get_sorted_exchange_prices(exchange, crypto, False)
+
+            response[exchange_key]["buying_price"] = compute_total_price(
+                buying_price, quantity
+            )
+            response[exchange_key]["selling_price"] = compute_total_price(
+                selling_price, quantity
+            )
+
+    return response
 
 
 async def get_supported_exchanges(crypto):
     try:
-        coinbase_assets = await Coinbase.get_assets()
-        gemini_assets = await Gemini.get_assets()
-        kraken_assets = await Kraken.get_assets()
+        assets = await get_assets()
     except Exception:
         logger.exception("Encountered exception while fetching supported assets.")
         raise FetchAssetsError(
             "Error while fetching the supported assets from exchanges."
         )
     exchanges = []
-    if crypto in coinbase_assets:
-        exchanges.append(Coinbase(crypto))
-    if crypto in gemini_assets:
-        exchanges.append(Gemini(crypto))
-    if crypto in kraken_assets:
-        exchanges.append(Kraken(crypto))
+    for exchange in EXCHANGE_MAP:
+        exchange_name = EXCHANGE_MAP[exchange]
+        if crypto in assets[exchange_name]:
+            exchanges.append(exchange)
 
     return exchanges
+
+
+async def get_assets():
+    assets = {}
+    for exchange in EXCHANGE_MAP:
+        exchange_name = EXCHANGE_MAP[exchange]
+        assets[exchange_name] = await exchange.get_assets()
+    return assets
 
 
 def compute_total_price(offers, required_quantity):
@@ -64,6 +84,34 @@ def compute_total_price(offers, required_quantity):
                 total_price += current_quantity * current_price
                 quantity_so_far += current_quantity
     return total_price
+
+
+def create_initial_response():
+    return {
+        "coinbase": {"buying_price": None, "selling_price": None},
+        "gemini": {"buying_price": None, "selling_price": None},
+        "kraken": {"buying_price": None, "selling_price": None},
+    }
+
+
+async def get_sorted_exchange_prices(exchange, crypto, is_buying_price):
+    try:
+        prices = (
+            await exchange(crypto).get_bid_price()
+            if is_buying_price
+            else await exchange(crypto).get_ask_price()
+        )
+    except Exception:
+        logger.exception("Encountered exception while fetching the bid and ask prices.")
+        raise FetchPricesError(
+            f"Error while fetching the bid and ask prices of {crypto.value} from exchanges."
+        )
+    sort_prices(prices, is_buying_price)
+    return prices
+
+
+def sort_prices(prices, reverse=False):
+    prices.sort(key=lambda x: x["price"], reverse=reverse)
 
 
 class FetchAssetsError(Exception):

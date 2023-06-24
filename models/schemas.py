@@ -1,7 +1,5 @@
 from enum import Enum
 
-from fastapi import FastAPI
-
 
 class Crypto(str, Enum):
     BTC = "BTC"
@@ -9,3 +7,8 @@ class Crypto(str, Enum):
     SOL = "SOL"
     XRP = "XRP"
     LRC = "LRC"
+
+
+class PriceType(str, Enum):
+    individual = "individual"
+    consolidated = "consolidated"

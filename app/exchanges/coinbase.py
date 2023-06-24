@@ -9,7 +9,7 @@ from typing import List, Dict, Any
 class Coinbase(ExchangeInterface):
     __base_url = COINBASE_PRICE_URL
     __assets_url = COINBASE_ASSETS_URL
-    __assets = None
+    __assets = {}
 
     def __init__(self, crypto_pair: str) -> None:
         """

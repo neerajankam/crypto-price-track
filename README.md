@@ -7,14 +7,14 @@ A simple FastAPI backend to fetch the buying and selling prices of cryptocurrenc
 #### Fetch buying and selling price of cryptocurrency.
 
 ```http
-GET /prices/{$crypto}?{$quantity}
+GET /prices/{$crypto}?{$quantity}&{$price_type}
 ```
 
 | Parameter | Type     | Description                |
 | :-------- | :------- | :------------------------- |
-| `crypto` | `string` | capitalized string denoting crypto ticker(Ex: BTC) **required**.|
-`quantity` | `string` | The quantity of the cryptocurrency. **required**
-
+| `crypto` | `string` | capitalized string denoting crypto ticker(Ex: BTC) **required**.
+|`quantity` | `string` | quantity of the cryptocurrency. **required**
+|`price_type` | `string` | parameter to fetch individual/ consolidated prices. **required**
 
 
 ## Requirements
