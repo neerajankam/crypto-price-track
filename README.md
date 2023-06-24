@@ -10,11 +10,11 @@ A simple FastAPI backend to fetch the buying and selling prices of cryptocurrenc
 GET /prices/{$crypto}?{$quantity}&{$price_type}
 ```
 
-| Parameter | Type     | Description                |
-| :-------- | :------- | :------------------------- |
-| `crypto` | `string` | capitalized string denoting crypto ticker(Ex: BTC) **required**.
-|`quantity` | `string` | quantity of the cryptocurrency. **required**
-|`price_type` | `string` | parameter to fetch individual/ consolidated prices. **required**
+| Parameter | Type     | Description                | Required                  |
+| :-------- | :------- | :------------------------- |:------------------------- |
+| `crypto` | `string` | capitalized string denoting crypto ticker(Ex: BTC).| Yes
+|`quantity` | `string` | quantity of the cryptocurrency.| Yes
+|`price_type` | `string` | parameter to fetch individual/ consolidated prices.| Yes
 
 
 ## Requirements
