@@ -20,7 +20,7 @@ limiter = Limiter(key_func=get_remote_address)
 @router.get("/prices/{crypto}")
 @limiter.limit("5/minute")
 async def get_prices(
-    request: Request, crypto: Crypto, quantity: str, view: ViewType
+    request: Request, crypto: Crypto, quantity: int, view: ViewType
 ) -> dict:
     """
     Retrieves the buying and selling prices for a given cryptocurrency.
@@ -28,7 +28,7 @@ async def get_prices(
     :param crypto: The cryptocurrency.
     :type crypto: Crypto
     :param quantity: The quantity of the cryptocurrency.
-    :type quantity: str
+    :type quantity: int
     :return: A dictionary containing the crypto, quantity, buying price, and selling price
     if no error is encountered. Else it returns the error message and 500 status code.
     :rtype: dict
@@ -43,10 +43,10 @@ async def get_prices(
         except FetchPricesError as e:
             return Response(content=str(e), status_code=500)
         return {
-            "Crypto": crypto,
-            "Quantity": quantity,
-            "Buying price": buying_price,
-            "Selling price": selling_price,
+            "crypto": crypto,
+            "quantity": quantity,
+            "buying_price": buying_price,
+            "selling_price": selling_price,
         }
     elif view == ViewType.individual:
         try:
@@ -56,8 +56,8 @@ async def get_prices(
         except FetchPricesError as e:
             return Response(content=str(e), status_code=500)
         response = {
-            "Crypto": crypto,
-            "Quantity": quantity,
+            "crypto": crypto,
+            "quantity": quantity,
         }
         response.update(prices)
         return response

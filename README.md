@@ -2,6 +2,7 @@
 A simple FastAPI backend to fetch the buying and selling prices of cryptocurrencies from exchanges like Coinbase, Kraken and Gemini.
 
 
+
 ## API Endpoints
 
 #### Fetch buying and selling price of cryptocurrency.
@@ -13,8 +14,19 @@ GET /prices/{$crypto}?{$quantity}&{$price_type}
 | Parameter | Type     | Description                | Required                  |
 | :-------- | :------- | :------------------------- |:------------------------- |
 | `crypto` | `string` | capitalized string denoting crypto ticker(Ex: BTC).| Yes
-|`quantity` | `string` | quantity of the cryptocurrency.| Yes
-|`price_type` | `string` | parameter to fetch individual/ consolidated prices.| Yes
+|`quantity` | `integer` | quantity of the cryptocurrency.| Yes
+|`view` | `string` | parameter to fetch individual/ consolidated prices.| Yes
+
+#### Get the most recent trades for a cryptocurrency.
+
+```http
+GET /trades/{crypto}?{$limit}
+```
+
+| Parameter | Type     | Description                | Required                  |
+| :-------- | :------- | :------------------------- |:------------------------- |
+| `crypto` | `string` | capitalized string denoting crypto ticker(Ex: BTC).| Yes
+|`limit` | `integer` | number of trades.| Yes
 
 
 ## Requirements

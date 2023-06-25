@@ -173,16 +173,6 @@ def empty_prices_response() -> Dict[str, Dict[str, Optional[float]]]:
     }
 
 
-def empty_trades_response() -> Dict[str, Optional[List[Dict[str, Any]]]]:
-    """
-    Create an empty trades response.
-
-    :return: The empty trades response.
-    :rtype: Dict[str, Optional[List[Dict[str, Any]]]]
-    """
-    return {"coinbase": None, "gemini": None}
-
-
 async def get_sorted_exchange_prices(
     exchange: Type[ExchangeInterface], crypto: str, is_buying_price: bool
 ) -> List[Dict[str, Any]]:
