@@ -143,7 +143,6 @@ def compute_total_price(
     :return: The total price.
     :rtype: float
     """
-    print(offers)
     quantity_so_far = 0
     total_price = 0
     required_quantity = float(required_quantity)

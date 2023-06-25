@@ -13,3 +13,7 @@ class ExchangeInterface(ABC):
     @classmethod
     def get_assets():
         pass
+
+    @abstractmethod
+    def get_trades():
+        pass

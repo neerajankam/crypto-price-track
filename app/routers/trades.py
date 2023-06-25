@@ -20,7 +20,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 @router.get("/trades/{crypto}")
 @limiter.limit("5/minute")
-async def get_trades(request: Request, crypto: Crypto, limit: str) -> dict:
+async def get_trades(request: Request, crypto: Crypto, limit: int) -> dict:
     response = {"Crypto": crypto}
     trades = await get_all_exchanges_trades(crypto, limit)
     response.update(trades)
