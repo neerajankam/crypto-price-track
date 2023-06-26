@@ -1,4 +1,16 @@
-from urls import COINBASE_PRICE_URL, COINBASE_ASSETS_URL, COINBASE_TRADES_URL
+import hashlib
+import hmac
+import os
+import time
+
+from fastapi.responses import Response
+
+from urls import (
+    COINBASE_PRICE_URL,
+    COINBASE_ASSETS_URL,
+    COINBASE_TRADES_URL,
+    COINBASE_ACCOUNTS_URL,
+)
 from .exchange_interface import ExchangeInterface
 from .utils import make_request as request_helper, structure_coinbase
 from app.supported_cryptos import NAMES
@@ -10,6 +22,8 @@ class Coinbase(ExchangeInterface):
     __price_url = COINBASE_PRICE_URL
     __assets_url = COINBASE_ASSETS_URL
     __trades_url = COINBASE_TRADES_URL
+    __accounts_url = COINBASE_ACCOUNTS_URL
+    __api_key = os.environ["COINBASE_API_KEY"]
     __assets = {}
 
     def __init__(self, crypto_pair: str) -> None:
@@ -20,29 +34,6 @@ class Coinbase(ExchangeInterface):
         :type crypto_pair: str
         """
         self.crypto_pair = crypto_pair
-
-    @classmethod
-    async def get_assets(cls) -> Dict[str, str]:
-        """
-        Retrieves the assets from Coinbase.
-
-        :raises Exception: If an error occurs while fetching the assets.
-
-        :return: The assets dictionary.
-        :rtype: Dict[str, str]
-        """
-        if not cls.__assets:
-            try:
-                response = await request_helper(cls.__assets_url)
-            except Exception:
-                logger.exception(f"Error while fetching assets from {cls.__assets_url}")
-                raise Exception(f"Error while fetching assets from {cls.__assets_url}")
-            assets = {}
-            for asset in response:
-                if asset["base_currency"] in NAMES and asset["quote_currency"] == "USD":
-                    assets[asset["base_currency"]] = asset["id"]
-            cls.__assets = assets
-        return cls.__assets
 
     async def get_trades(self, limit: int) -> List[Dict[str, Any]]:
         """
@@ -89,3 +80,68 @@ class Coinbase(ExchangeInterface):
             for ask in response["asks"]
         ]
         return response
+
+    @classmethod
+    async def get_assets(cls) -> Dict[str, str]:
+        """
+        Retrieves the assets from Coinbase.
+
+        :raises Exception: If an error occurs while fetching the assets.
+
+        :return: The assets dictionary.
+        :rtype: Dict[str, str]
+        """
+        if not cls.__assets:
+            response = await request_helper(cls.__assets_url)
+            if not isinstance(response, dict):
+                return response
+            assets = {}
+            for asset in response:
+                if asset["base_currency"] in NAMES and asset["quote_currency"] == "USD":
+                    assets[asset["base_currency"]] = asset["id"]
+            cls.__assets = assets
+        return cls.__assets
+
+    @classmethod
+    async def get_account_details(cls):
+        headers = cls.get_authorization_headers("GET", cls.__accounts_url, None)
+        if not headers:
+            return Response(
+                content={
+                    "Error while fetching coinbase authorization details.",
+                },
+                status_code=500,
+            )
+        response = await request_helper(cls.__accounts_url, headers)
+        return response
+
+    @classmethod
+    def get_authorization_headers(cls, request_method, url, body):
+        timestamp = str(int(time.time()))
+        message = timestamp + request_method + url + (body or "")
+        try:
+            encoded_message = message.encode("utf-8")
+        except UnicodeEncodeError:
+            logger.exception(
+                "Failed to encode the message while grabbing coinbase authorization headers."
+            )
+            return None
+        try:
+            secret_key = os.environ["COINBASE_SECRET_KEY"]
+        except KeyError:
+            logger.exception(
+                "Coinbase secret key needs to be set to be able to make the API call."
+            )
+            return None
+
+        secret_key_bytes = secret_key.encode("utf-8")
+
+        signature = hmac.new(
+            secret_key_bytes, encoded_message, hashlib.sha256
+        ).hexdigest()
+
+        return {
+            "CB-ACCESS-SIGN": signature,
+            "CB-ACCESS-TIMESTAMP": timestamp,
+            "CB-ACCESS-KEY": cls.__api_key,
+        }

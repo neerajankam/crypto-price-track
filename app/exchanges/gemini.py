@@ -32,11 +32,9 @@ class Gemini(ExchangeInterface):
         :rtype: Dict[str, str]
         """
         if not cls.__assets:
-            try:
-                response = await request_helper(cls.__assets_url)
-            except Exception:
-                logger.exception(f"Error while fetching assets from {cls.__assets_url}")
-                raise Exception(f"Error while fetching assets from {cls.__assets_url}")
+            response = await request_helper(cls.__assets_url)
+            if not isinstance(response, dict):
+                return response
             assets = {}
             for asset in response:
                 for crypto in NAMES:

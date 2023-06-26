@@ -1,9 +1,11 @@
 from copy import deepcopy
 
 import aiohttp
-from aiohttp import ClientError
+from aiohttp import ClientError, ClientResponseError
+from fastapi import Response
+
 from logger.app_logger import logger
-from typing import Any, Dict, List
+from typing import Any, Dict, Optional, List
 
 
 individual_trade_response = {
@@ -14,7 +16,7 @@ individual_trade_response = {
 }
 
 
-async def make_request(url: str) -> Dict[str, Any]:
+async def make_request(url: str, headers: Optional[Dict] = None) -> Dict[str, Any]:
     """
     Makes an HTTP GET request to the specified URL.
 
@@ -27,16 +29,18 @@ async def make_request(url: str) -> Dict[str, Any]:
     """
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
+            async with session.get(url, headers=headers) as response:
                 response.raise_for_status()
                 response_json = await response.json()
         return response_json
+    except ClientResponseError as e:
+        return Response(content=str(e.message), status_code=e.status)
     except ClientError as e:
         logger.exception(f"Error while making the request to {url}")
-        raise ClientError(f"Error while making the request to {url}")
-    except Exception:
+        return Response(content=str(e.message), status_code=e.status)
+    except Exception as e:
         logger.exception(f"Encountered exception while making request to {url}")
-        raise Exception(f"Encountered exception while making request to {url}")
+        return Response(content=str(e), status_code=500)
 
 
 def structure_coinbase(trades: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

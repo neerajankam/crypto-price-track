@@ -12,3 +12,7 @@ class Crypto(str, Enum):
 class ViewType(str, Enum):
     individual = "individual"
     consolidated = "consolidated"
+
+
+class Exchange(str, Enum):
+    coinbase = "coinbase"
