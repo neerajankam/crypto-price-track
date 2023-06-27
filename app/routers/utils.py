@@ -108,7 +108,7 @@ async def get_supported_exchanges(crypto: str) -> List[Type[ExchangeInterface]]:
             if crypto in assets[exchange_name]:
                 exchanges.append(exchange)
 
-    except TypeError:
+    except Exception:
         logger.exception("Encountered exception while fetching supported assets.")
         raise FetchAssetsError(
             "Error while fetching the supported assets from exchanges."
@@ -216,8 +216,10 @@ def sort_prices(prices: List[Dict[str, Any]], reverse: bool = False) -> None:
     prices.sort(key=lambda x: x["price"], reverse=reverse)
 
 
-async def get_coinbase_account_details():
-    response = await Coinbase.get_account_details()
+async def get_balance_details(exchange):
+    for exchange_class in EXCHANGE_MAP:
+        if exchange == EXCHANGE_MAP[exchange_class]:
+            response = await exchange_class.get_balance_details()
     return response
 
 

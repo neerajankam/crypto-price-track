@@ -1,4 +1,17 @@
-from urls import KRAKEN_PRICE_URL, KRAKEN_ASSETS_URL, KRAKEN_TRADES_URL
+import base64
+import hashlib
+import hmac
+import os
+import time
+import urllib
+
+from urls import (
+    KRAKEN_PRICE_URL,
+    KRAKEN_ASSETS_URL,
+    KRAKEN_TRADES_URL,
+    KRAKEN_BALANCES_URL,
+    KRAKEN_BALANCES_POSTFIX,
+)
 from .exchange_interface import ExchangeInterface
 from .utils import make_request as request_helper, structure_kraken
 from app.supported_cryptos import NAMES
@@ -10,6 +23,7 @@ class Kraken(ExchangeInterface):
     __price_url = KRAKEN_PRICE_URL
     __assets_url = KRAKEN_ASSETS_URL
     __trades_url = KRAKEN_TRADES_URL
+    __balances_url = KRAKEN_BALANCES_URL
     __assets = None
 
     def __init__(self, crypto_pair: str) -> None:
@@ -32,7 +46,7 @@ class Kraken(ExchangeInterface):
         :rtype: Dict[str, str]
         """
         if not cls.__assets:
-            response = await request_helper(cls.__assets_url)
+            response = await request_helper(cls.__assets_url, "GET")
             if not isinstance(response, dict):
                 return response
             response = response["result"]
@@ -58,7 +72,7 @@ class Kraken(ExchangeInterface):
         complete_url = Kraken.__trades_url.format(
             Kraken.__assets[self.crypto_pair], limit
         )
-        response = await request_helper(complete_url)
+        response = await request_helper(complete_url, "GET")
         structured_response = structure_kraken(
             response, Kraken.__assets[self.crypto_pair]
         )
@@ -72,7 +86,7 @@ class Kraken(ExchangeInterface):
         :rtype: List[Dict[str, float]]
         """
         complete_url = Kraken.__price_url.format(Kraken.__assets[self.crypto_pair])
-        response = await request_helper(complete_url)
+        response = await request_helper(complete_url, "GET")
         response = [
             {"price": float(bid[0]), "amount": float(bid[1])}
             for bid in response["result"][Kraken.__assets[self.crypto_pair]]["bids"]
@@ -87,9 +101,41 @@ class Kraken(ExchangeInterface):
         :rtype: List[Dict[str, float]]
         """
         complete_url = Kraken.__price_url.format(Kraken.__assets[self.crypto_pair])
-        response = await request_helper(complete_url)
+        response = await request_helper(complete_url, "GET")
         response = [
             {"price": float(ask[0]), "amount": float(ask[1])}
             for ask in response["result"][Kraken.__assets[self.crypto_pair]]["asks"]
         ]
         return response
+
+    @classmethod
+    async def get_balance_details(cls):
+        data = {"nonce": str(int(1000 * time.time()))}
+        headers = cls.get_authorization_headers(data)
+        response = await request_helper(cls.__balances_url, "POST", headers, data)
+        return response["result"]
+
+    @classmethod
+    def get_authorization_headers(cls, data):
+        try:
+            api_key = os.environ["KRAKEN_API_KEY"]
+            secret_key = os.environ["KRAKEN_SECRET_KEY"]
+        except KeyError:
+            logger.exception(
+                "Kraken keys needs to be set to be able to make the API call."
+            )
+            return None
+        kraken_signature = cls.get_kraken_signature(
+            KRAKEN_BALANCES_POSTFIX, data, secret_key
+        )
+        return {"API-Key": api_key, "API-Sign": kraken_signature}
+
+    @classmethod
+    def get_kraken_signature(cls, url, data, secret):
+        postdata = urllib.parse.urlencode(data)
+        encoded = (str(data["nonce"]) + postdata).encode()
+        message = url.encode() + hashlib.sha256(encoded).digest()
+
+        mac = hmac.new(base64.b64decode(secret), message, hashlib.sha512)
+        sigdigest = base64.b64encode(mac.digest())
+        return sigdigest.decode()

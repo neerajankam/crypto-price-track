@@ -9,7 +9,7 @@ from urls import (
     COINBASE_PRICE_URL,
     COINBASE_ASSETS_URL,
     COINBASE_TRADES_URL,
-    COINBASE_ACCOUNTS_URL,
+    COINBASE_BALANCES_URL,
 )
 from .exchange_interface import ExchangeInterface
 from .utils import make_request as request_helper, structure_coinbase
@@ -22,8 +22,7 @@ class Coinbase(ExchangeInterface):
     __price_url = COINBASE_PRICE_URL
     __assets_url = COINBASE_ASSETS_URL
     __trades_url = COINBASE_TRADES_URL
-    __accounts_url = COINBASE_ACCOUNTS_URL
-    __api_key = os.environ["COINBASE_API_KEY"]
+    __balances_url = COINBASE_BALANCES_URL
     __assets = {}
 
     def __init__(self, crypto_pair: str) -> None:
@@ -47,7 +46,7 @@ class Coinbase(ExchangeInterface):
         complete_url = Coinbase.__trades_url.format(
             Coinbase.__assets[self.crypto_pair], limit
         )
-        response = await request_helper(complete_url)
+        response = await request_helper(complete_url, "GET")
         structured_response = structure_coinbase(response)
         return structured_response
 
@@ -59,7 +58,7 @@ class Coinbase(ExchangeInterface):
         :rtype: List[Dict[str, float]]
         """
         complete_url = Coinbase.__price_url.format(Coinbase.__assets[self.crypto_pair])
-        response = await request_helper(complete_url)
+        response = await request_helper(complete_url, "GET")
         response = [
             {"price": float(bid[0]), "amount": float(bid[1])}
             for bid in response["bids"]
@@ -74,7 +73,7 @@ class Coinbase(ExchangeInterface):
         :rtype: List[Dict[str, float]]
         """
         complete_url = Coinbase.__price_url.format(Coinbase.__assets[self.crypto_pair])
-        response = await request_helper(complete_url)
+        response = await request_helper(complete_url, "GET")
         response = [
             {"price": float(ask[0]), "amount": float(ask[1])}
             for ask in response["asks"]
@@ -92,7 +91,7 @@ class Coinbase(ExchangeInterface):
         :rtype: Dict[str, str]
         """
         if not cls.__assets:
-            response = await request_helper(cls.__assets_url)
+            response = await request_helper(cls.__assets_url, "GET")
             if not isinstance(response, dict):
                 return response
             assets = {}
@@ -103,8 +102,8 @@ class Coinbase(ExchangeInterface):
         return cls.__assets
 
     @classmethod
-    async def get_account_details(cls):
-        headers = cls.get_authorization_headers("GET", cls.__accounts_url, None)
+    async def get_balance_details(cls):
+        headers = cls.get_authorization_headers(cls.__balances_url, None, "GET")
         if not headers:
             return Response(
                 content={
@@ -112,11 +111,11 @@ class Coinbase(ExchangeInterface):
                 },
                 status_code=500,
             )
-        response = await request_helper(cls.__accounts_url, headers)
+        response = await request_helper(cls.__balances_url, "GET", headers)
         return response
 
     @classmethod
-    def get_authorization_headers(cls, request_method, url, body):
+    def get_authorization_headers(cls, url, body, request_method):
         timestamp = str(int(time.time()))
         message = timestamp + request_method + url + (body or "")
         try:
@@ -127,10 +126,11 @@ class Coinbase(ExchangeInterface):
             )
             return None
         try:
+            api_key = os.environ["COINBASE_API_KEY"]
             secret_key = os.environ["COINBASE_SECRET_KEY"]
         except KeyError:
             logger.exception(
-                "Coinbase secret key needs to be set to be able to make the API call."
+                "Coinbase keys needs to be set to be able to make the API call."
             )
             return None
 
@@ -143,5 +143,5 @@ class Coinbase(ExchangeInterface):
         return {
             "CB-ACCESS-SIGN": signature,
             "CB-ACCESS-TIMESTAMP": timestamp,
-            "CB-ACCESS-KEY": cls.__api_key,
+            "CB-ACCESS-KEY": api_key,
         }

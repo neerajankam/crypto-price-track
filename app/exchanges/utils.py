@@ -16,12 +16,23 @@ individual_trade_response = {
 }
 
 
-async def make_request(url: str, headers: Optional[Dict] = None) -> Dict[str, Any]:
+async def make_request(
+    url: str,
+    method: str = "GET",
+    headers: Optional[Dict] = None,
+    data: Optional[Dict] = None,
+) -> Dict[str, Any]:
     """
-    Makes an HTTP GET request to the specified URL.
+    Makes an HTTP request to the specified URL.
 
     :param url: The URL to make the request to.
     :type url: str
+    :param method: The HTTP method to use (GET or POST).
+    :type method: str
+    :param headers: The headers to include in the request.
+    :type headers: Optional[Dict]
+    :param data: The data to send in the request body (for POST method).
+    :type data: Optional[Dict]
     :return: The JSON response data.
     :rtype: Dict[str, Any]
     :raises ClientError: If an error occurs during the request.
@@ -29,9 +40,19 @@ async def make_request(url: str, headers: Optional[Dict] = None) -> Dict[str, An
     """
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as response:
-                response.raise_for_status()
-                response_json = await response.json()
+            if method.upper() == "GET":
+                async with session.get(url, headers=headers) as response:
+                    response.raise_for_status()
+            elif method.upper() == "POST":
+                async with session.post(url, headers=headers, data=data) as response:
+                    response_json = await response.json()
+                    response.raise_for_status()
+            else:
+                raise ValueError(
+                    "Invalid HTTP method. Only GET and POST are supported."
+                )
+
+            response_json = await response.json()
         return response_json
     except ClientResponseError as e:
         return Response(content=str(e.message), status_code=e.status)
