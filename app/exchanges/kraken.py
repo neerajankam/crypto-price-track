@@ -16,7 +16,7 @@ from .exchange_interface import ExchangeInterface
 from .utils import make_request as request_helper, structure_kraken
 from app.supported_cryptos import NAMES
 from logger.app_logger import logger
-from typing import List, Dict, Any
+from typing import Any, Dict, List, Optional, Union
 
 
 class Kraken(ExchangeInterface):
@@ -109,14 +109,33 @@ class Kraken(ExchangeInterface):
         return response
 
     @classmethod
-    async def get_balance_details(cls):
+    async def get_balance_details(cls) -> dict:
+        """
+        Get balance details from Kraken exchange.
+
+        :return: The balance details.
+        :rtype: dict
+        """
         data = {"nonce": str(int(1000 * time.time()))}
         headers = cls.get_authorization_headers(data)
+        if not headers:
+            return Response(
+                content={"Error while fetching kraken authorization details."},
+                status_code=500,
+            )
         response = await request_helper(cls.__balances_url, "POST", headers, data)
         return response["result"]
 
     @classmethod
-    def get_authorization_headers(cls, data):
+    def get_authorization_headers(cls, data: dict) -> Optional[dict]:
+        """
+        Get the authorization headers for Kraken API requests.
+
+        :param data: The data to include in the request.
+        :type data: dict
+        :return: The authorization headers or None if there was an error.
+        :rtype: Optional[dict]
+        """
         try:
             api_key = os.environ["KRAKEN_API_KEY"]
             secret_key = os.environ["KRAKEN_SECRET_KEY"]
@@ -125,17 +144,34 @@ class Kraken(ExchangeInterface):
                 "Kraken keys needs to be set to be able to make the API call."
             )
             return None
-        kraken_signature = cls.get_kraken_signature(
-            KRAKEN_BALANCES_POSTFIX, data, secret_key
-        )
-        return {"API-Key": api_key, "API-Sign": kraken_signature}
+        signature = cls.get_signature(KRAKEN_BALANCES_POSTFIX, data, secret_key)
+        if not signature:
+            logger.warning("Error while building kraken signature.")
+            return None
+        return {"API-Key": api_key, "API-Sign": signature}
 
     @classmethod
-    def get_kraken_signature(cls, url, data, secret):
-        postdata = urllib.parse.urlencode(data)
-        encoded = (str(data["nonce"]) + postdata).encode()
-        message = url.encode() + hashlib.sha256(encoded).digest()
+    def get_signature(cls, url: str, data: dict, secret: str) -> Optional[str]:
+        """
+        Get the signature for Kraken API requests.
 
-        mac = hmac.new(base64.b64decode(secret), message, hashlib.sha512)
-        sigdigest = base64.b64encode(mac.digest())
+        :param url: The URL of the request.
+        :type url: str
+        :param data: The data to include in the request.
+        :type data: dict
+        :param secret: The secret key for the API.
+        :type secret: str
+        :return: The signature or None if there was an error.
+        :rtype: Optional[str]
+        """
+        try:
+            postdata = urllib.parse.urlencode(data)
+            encoded = (str(data["nonce"]) + postdata).encode()
+            message = url.encode() + hashlib.sha256(encoded).digest()
+
+            mac = hmac.new(base64.b64decode(secret), message, hashlib.sha512)
+            sigdigest = base64.b64encode(mac.digest())
+        except Exception:
+            logger.exception("Encountered error while building kraken signature.")
+            return None
         return sigdigest.decode()

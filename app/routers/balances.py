@@ -15,10 +15,16 @@ limiter = Limiter(key_func=get_remote_address)
 @router.get("/balances")
 @limiter.limit("5/minute")
 async def get_exchange_balance_details(request: Request, exchange: Exchange) -> dict:
+    """
+    Get the balance details for the specified exchange.
+
+    :param request: The request object.
+    :type request: Request
+    :param exchange: The exchange value.
+    :type exchange: Exchange
+    :return: The balance details.
+    :rtype: dict
+    """
     exchange = exchange.value
-    if exchange == "coinbase":
-        response = await get_balance_details("coinbase")
-        return response
-    elif exchange == "kraken":
-        response = await get_balance_details("kraken")
-        return response
+    response = await get_balance_details(exchange)
+    return response

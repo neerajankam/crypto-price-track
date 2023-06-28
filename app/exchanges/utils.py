@@ -3,9 +3,10 @@ from copy import deepcopy
 import aiohttp
 from aiohttp import ClientError, ClientResponseError
 from fastapi import Response
+import requests
 
 from logger.app_logger import logger
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, Union
 
 
 individual_trade_response = {
@@ -21,7 +22,7 @@ async def make_request(
     method: str = "GET",
     headers: Optional[Dict] = None,
     data: Optional[Dict] = None,
-) -> Dict[str, Any]:
+) -> Union[dict, Response]:
     """
     Makes an HTTP request to the specified URL.
 
@@ -61,6 +62,42 @@ async def make_request(
         return Response(content=str(e.message), status_code=e.status)
     except Exception as e:
         logger.exception(f"Encountered exception while making request to {url}")
+        return Response(content=str(e), status_code=500)
+
+
+def make_request_synchronous(
+    url: str, method: str, headers: Optional[Dict] = None, data: Optional[Dict] = None
+) -> Union[dict, Response]:
+    """
+    Make a synchronous HTTP request to the specified URL.
+
+    :param url: The URL to make the request to.
+    :type url: str
+    :param method: The HTTP method to use (POST or GET).
+    :type method: str
+    :param headers: The headers to include in the request.
+    :type headers: Optional[Dict]
+    :param data: The data to include in the request (for POST requests).
+    :type data: Optional[Dict]
+    :return: The JSON response data.
+    :rtype: dict
+    """
+    try:
+        if method.upper() == "POST":
+            response = requests.post(url, headers=headers, data=data)
+        elif method.upper() == "GET":
+            response = response.get(url, headers=headers)
+        status_code = response.status_code
+        response_data = response.json()
+
+        if response_data:
+            return response_data
+        else:
+            return Response(content="No balances to show.", status_code=status_code)
+
+    except requests.RequestException as e:
+        return Response(content=str(e), status_code=500)
+    except Exception as e:
         return Response(content=str(e), status_code=500)
 
 

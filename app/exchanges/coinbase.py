@@ -15,7 +15,7 @@ from .exchange_interface import ExchangeInterface
 from .utils import make_request as request_helper, structure_coinbase
 from app.supported_cryptos import NAMES
 from logger.app_logger import logger
-from typing import List, Dict, Any
+from typing import Any, Dict, List, Union
 
 
 class Coinbase(ExchangeInterface):

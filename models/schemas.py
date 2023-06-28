@@ -17,3 +17,4 @@ class ViewType(str, Enum):
 class Exchange(str, Enum):
     coinbase = "coinbase"
     kraken = "kraken"
+    gemini = "gemini"
