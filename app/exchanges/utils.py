@@ -43,6 +43,7 @@ async def make_request(
         async with aiohttp.ClientSession() as session:
             if method.upper() == "GET":
                 async with session.get(url, headers=headers) as response:
+                    response_json = await response.json()
                     response.raise_for_status()
             elif method.upper() == "POST":
                 async with session.post(url, headers=headers, data=data) as response:
@@ -56,10 +57,10 @@ async def make_request(
             response_json = await response.json()
         return response_json
     except ClientResponseError as e:
-        return Response(content=str(e.message), status_code=e.status)
+        return Response(content=str(e), status_code=response.status)
     except ClientError as e:
         logger.exception(f"Error while making the request to {url}")
-        return Response(content=str(e.message), status_code=e.status)
+        return Response(content=str(e), status_code=response.status)
     except Exception as e:
         logger.exception(f"Encountered exception while making request to {url}")
         return Response(content=str(e), status_code=500)
@@ -96,9 +97,9 @@ def make_request_synchronous(
             return Response(content="No balances to show.", status_code=status_code)
 
     except requests.RequestException as e:
-        return Response(content=str(e), status_code=500)
+        return Response(content=str(e), status_code=status_code)
     except Exception as e:
-        return Response(content=str(e), status_code=500)
+        return Response(content=str(e), status_code=status_code)
 
 
 def structure_coinbase(trades: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

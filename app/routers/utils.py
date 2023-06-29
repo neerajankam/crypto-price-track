@@ -6,11 +6,7 @@ from logger.app_logger import logger
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 
-EXCHANGE_MAP = {
-    Coinbase: "coinbase",
-    Gemini: "gemini",
-    Kraken: "kraken",
-}
+EXCHANGE_MAP = {Coinbase: "coinbase", Gemini: "gemini", Kraken: "kraken"}
 
 
 async def get_consolidated_prices(crypto: str, quantity: float) -> Tuple[float, float]:
@@ -57,7 +53,6 @@ async def get_all_exchanges_prices(
             exchange_key = EXCHANGE_MAP[exchange]
             buying_price = await get_sorted_exchange_prices(exchange, crypto, True)
             selling_price = await get_sorted_exchange_prices(exchange, crypto, False)
-
             response[exchange_key]["buying_price"] = compute_total_price(
                 buying_price, quantity
             )

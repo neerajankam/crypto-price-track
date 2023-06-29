@@ -14,7 +14,11 @@ from urls import (
     GEMINI_BALANCES_POSTFIX,
 )
 from .exchange_interface import ExchangeInterface
-from .utils import make_request_synchronous as request_helper, structure_gemini
+from .utils import (
+    make_request as request_helper,
+    make_request_synchronous as request_helper_sync,
+    structure_gemini,
+)
 from app.supported_cryptos import NAMES
 from logger.app_logger import logger
 from typing import Any, Dict, List, Optional, Union
@@ -48,8 +52,6 @@ class Gemini(ExchangeInterface):
         """
         if not cls.__assets:
             response = await request_helper(cls.__assets_url)
-            if not isinstance(response, dict):
-                return response
             assets = {}
             for asset in response:
                 for crypto in NAMES:
@@ -123,7 +125,7 @@ class Gemini(ExchangeInterface):
                 status_code=500,
             )
         print(headers, data)
-        response = request_helper(cls.__balances_url, "POST", headers, data)
+        response = request_helper_sync(cls.__balances_url, "POST", headers, data)
         return response
 
     @classmethod

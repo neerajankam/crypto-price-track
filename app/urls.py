@@ -16,7 +16,7 @@ KRAKEN_PRICE_URL = KRAKEN_BASE_URL + "/public/Depth?pair={}"
 # URLs to get recent trades
 COINBASE_TRADES_URL = COINBASE_ASSETS_URL + "/{}/trades?limit={}"
 GEMINI_TRADES_URL = GEMINI_BASE_URL + "/trades/{}?limit_trades={}"
-KRAKEN_TRADES_URL = KRAKEN_BASE_URL + "/Trades?pair={}&count={}"
+KRAKEN_TRADES_URL = KRAKEN_BASE_URL + "/public/Trades?pair={}&count={}"
 
 # URLs to get balance details
 COINBASE_BALANCES_URL = COINBASE_BASE_URL + "/accounts"

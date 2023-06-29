@@ -92,8 +92,6 @@ class Coinbase(ExchangeInterface):
         """
         if not cls.__assets:
             response = await request_helper(cls.__assets_url, "GET")
-            if not isinstance(response, dict):
-                return response
             assets = {}
             for asset in response:
                 if asset["base_currency"] in NAMES and asset["quote_currency"] == "USD":
