@@ -1,5 +1,5 @@
 # Crypto price tracker
-A simple FastAPI backend to fetch the buying and selling prices of cryptocurrencies from exchanges like Coinbase, Kraken and Gemini.
+A simple FastAPI backend to fetch the prices of cryptocurrencies, trades and balances from cryptocurrency exchanges - Coinbase, Kraken and Gemini.
 
 
 
@@ -8,7 +8,7 @@ A simple FastAPI backend to fetch the buying and selling prices of cryptocurrenc
 #### Fetch buying and selling price of cryptocurrency.
 
 ```http
-GET /prices/{$crypto}?{$quantity}&{$price_type}
+GET /prices/{$crypto}?{$quantity}&{$view}
 ```
 
 | Parameter | Type     | Description                | Required                  |
@@ -28,13 +28,21 @@ GET /trades/{crypto}?{$limit}
 | `crypto` | `string` | capitalized string denoting crypto ticker(Ex: BTC).| Yes
 |`limit` | `integer` | number of trades.| Yes
 
+#### Get the user balances from an exchange.
 
-## Requirements
+```http
+GET /balances?{$exchange}
+```
+| Parameter | Type     | Description                | Required                  |
+| :-------- | :------- | :------------------------- |:------------------------- |
+| `exchange` | `string` | exchange to fetch the balances from| Yes
+
+
+#### Requirements
 
 1) [Python3](https://www.python.org/downloads/)(preferably 3.11.3 or newer)
 
 2) [Postman](https://www.postman.com/downloads/)/ your API platform of choice to test the endpoints.
-
 
 
 
