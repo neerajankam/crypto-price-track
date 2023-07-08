@@ -6,6 +6,8 @@ import json
 import os
 import time
 
+from app.supported_cryptos import NAMES
+from custom_exceptions import APIKeyError, EncodeError, SignatureError
 from urls import (
     GEMINI_PRICE_URL,
     GEMINI_ASSETS_URL,
@@ -19,17 +21,16 @@ from .utils import (
     make_request_synchronous as request_helper_sync,
     structure_gemini,
 )
-from app.supported_cryptos import NAMES
 from logger.app_logger import logger
 from typing import Any, Dict, List, Optional, Union
 
 
 class Gemini(ExchangeInterface):
-    __price_url = GEMINI_PRICE_URL
-    __assets_url = GEMINI_ASSETS_URL
-    __trades_url = GEMINI_TRADES_URL
-    __balances_url = GEMINI_BALANCES_URL
-    __assets = {}
+    price_url = GEMINI_PRICE_URL
+    assets_url = GEMINI_ASSETS_URL
+    trades_url = GEMINI_TRADES_URL
+    balances_url = GEMINI_BALANCES_URL
+    assets = {}
 
     def __init__(self, crypto_pair: str) -> None:
         """
@@ -50,15 +51,15 @@ class Gemini(ExchangeInterface):
         :return: The assets dictionary.
         :rtype: Dict[str, str]
         """
-        if not cls.__assets:
-            response = await request_helper(cls.__assets_url)
+        if not cls.assets:
+            response = await request_helper(cls.assets_url)
             assets = {}
             for asset in response:
                 for crypto in NAMES:
                     if crypto + "USD" == asset.upper():
                         assets[crypto] = asset.upper()
-            cls.__assets = assets
-        return cls.__assets
+            cls.assets = assets
+        return cls.assets
 
     async def get_trades(self, limit: int) -> List[Dict[str, Any]]:
         """
@@ -69,9 +70,7 @@ class Gemini(ExchangeInterface):
         :return: A list of structured trades.
         :rtype: List[Dict[str, Any]]
         """
-        complete_url = Gemini.__trades_url.format(
-            Gemini.__assets[self.crypto_pair], limit
-        )
+        complete_url = Gemini.trades_url.format(Gemini.assets[self.crypto_pair], limit)
         response = await request_helper(complete_url)
         structured_response = structure_gemini(response)
         return structured_response
@@ -83,7 +82,7 @@ class Gemini(ExchangeInterface):
         :return: The bid prices.
         :rtype: List[Dict[str, float]]
         """
-        complete_url = Gemini.__price_url.format(Gemini.__assets[self.crypto_pair])
+        complete_url = Gemini.price_url.format(Gemini.assets[self.crypto_pair])
         response = await request_helper(complete_url)
         response = [
             {"price": float(bid["price"]), "amount": float(bid["amount"])}
@@ -98,7 +97,7 @@ class Gemini(ExchangeInterface):
         :return: The ask prices.
         :rtype: List[Dict[str, float]]
         """
-        complete_url = Gemini.__price_url.format(Gemini.__assets[self.crypto_pair])
+        complete_url = Gemini.price_url.format(Gemini.assets[self.crypto_pair])
         response = await request_helper(complete_url)
         response = [
             {"price": float(ask["price"]), "amount": float(ask["amount"])}
@@ -119,13 +118,7 @@ class Gemini(ExchangeInterface):
             "request": GEMINI_BALANCES_POSTFIX,
         }
         headers = cls.get_authorization_headers(data)
-        if not headers:
-            return Response(
-                content={"Error while fetching kraken authorization details."},
-                status_code=500,
-            )
-        print(headers, data)
-        response = request_helper_sync(cls.__balances_url, "POST", headers, data)
+        response = request_helper_sync(cls.balances_url, "POST", headers, data)
         return response
 
     @classmethod
@@ -145,11 +138,11 @@ class Gemini(ExchangeInterface):
             logger.exception(
                 "Gemini keys needs to be set to be able to make the API call."
             )
-            return None
+            raise APIKeyError(
+                status_code=500,
+                detail="Gemini keys needs to be set to be able to make the API call.",
+            )
         payload, signature = cls.get_payload_and_signature(data, secret_key)
-        if not signature:
-            logger.warning("Error while building kraken signature.")
-            return None
         return {
             "X-GEMINI-APIKEY": api_key,
             "X-GEMINI-PAYLOAD": payload,
@@ -175,7 +168,21 @@ class Gemini(ExchangeInterface):
             signature = hmac.new(
                 secret_key_bytes, payload_b64, hashlib.sha384
             ).hexdigest()
+        except TypeError:
+            logger.exception("Error while serializing gemini data.")
+            raise TypeError("Error while serializing gemini data.")
+        except UnicodeEncodeError:
+            logger.exception("Encountered error while building gemini signature.")
+            raise EncodeError(
+                status_code=500,
+                detail="Failed to encode the message while building gemini authorization headers.",
+            )
         except Exception:
-            logger.exception("Encountered error while building kraken signature.")
-            return None
+            logger.exception(
+                "Error encountered while building gemini signature and payload."
+            )
+            raise SignatureError(
+                status_code=500,
+                detail="Error encountered while building gemini signature and payload.",
+            )
         return payload_b64, signature

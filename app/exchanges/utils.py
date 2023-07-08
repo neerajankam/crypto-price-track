@@ -57,13 +57,13 @@ async def make_request(
             response_json = await response.json()
         return response_json
     except ClientResponseError as e:
-        return Response(content=str(e), status_code=response.status)
+        raise ClientResponseError(message=str(e), status=response.status)
     except ClientError as e:
-        logger.exception(f"Error while making the request to {url}")
-        return Response(content=str(e), status_code=response.status)
+        logger.exception(f"ClientError while making request to {url}")
+        raise ClientError(message=str(e), status=response.status)
     except Exception as e:
         logger.exception(f"Encountered exception while making request to {url}")
-        return Response(content=str(e), status_code=500)
+        raise Exception(str(e))
 
 
 def make_request_synchronous(
@@ -97,9 +97,11 @@ def make_request_synchronous(
             return Response(content="No balances to show.", status_code=status_code)
 
     except requests.RequestException as e:
-        return Response(content=str(e), status_code=status_code)
+        logger.exception(f"RequestException while making request to {url}")
+        raise RequestException(str(e))
     except Exception as e:
-        return Response(content=str(e), status_code=status_code)
+        logger.exception(f"Encountered exception while making request to {url}")
+        raise Exception(str(e))
 
 
 def structure_coinbase(trades: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

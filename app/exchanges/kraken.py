@@ -5,6 +5,8 @@ import os
 import time
 import urllib
 
+from app.supported_cryptos import NAMES
+from custom_exceptions import APIKeyError, EncodeError, SignatureError
 from urls import (
     KRAKEN_PRICE_URL,
     KRAKEN_ASSETS_URL,
@@ -14,17 +16,16 @@ from urls import (
 )
 from .exchange_interface import ExchangeInterface
 from .utils import make_request as request_helper, structure_kraken
-from app.supported_cryptos import NAMES
 from logger.app_logger import logger
 from typing import Any, Dict, List, Optional, Union
 
 
 class Kraken(ExchangeInterface):
-    __price_url = KRAKEN_PRICE_URL
-    __assets_url = KRAKEN_ASSETS_URL
-    __trades_url = KRAKEN_TRADES_URL
-    __balances_url = KRAKEN_BALANCES_URL
-    __assets = None
+    price_url = KRAKEN_PRICE_URL
+    assets_url = KRAKEN_ASSETS_URL
+    trades_url = KRAKEN_TRADES_URL
+    balances_url = KRAKEN_BALANCES_URL
+    assets = None
 
     def __init__(self, crypto_pair: str) -> None:
         """
@@ -45,8 +46,8 @@ class Kraken(ExchangeInterface):
         :return: The assets dictionary.
         :rtype: Dict[str, str]
         """
-        if not cls.__assets:
-            response = await request_helper(cls.__assets_url, "GET")
+        if not cls.assets:
+            response = await request_helper(cls.assets_url, "GET")
             if not isinstance(response, dict):
                 return response
             response = response["result"]
@@ -57,8 +58,8 @@ class Kraken(ExchangeInterface):
                         assets[crypto] = crypto + "USD"
             assets["BTC"] = "XXBTZUSD"
             assets["ETH"] = "XETHZUSD"
-            cls.__assets = assets
-        return cls.__assets
+            cls.assets = assets
+        return cls.assets
 
     async def get_trades(self, limit: int) -> List[Dict[str, Any]]:
         """
@@ -69,12 +70,10 @@ class Kraken(ExchangeInterface):
         :return: A list of structured trades.
         :rtype: List[Dict[str, Any]]
         """
-        complete_url = Kraken.__trades_url.format(
-            Kraken.__assets[self.crypto_pair], limit
-        )
+        complete_url = Kraken.trades_url.format(Kraken.assets[self.crypto_pair], limit)
         response = await request_helper(complete_url, "GET")
         structured_response = structure_kraken(
-            response, Kraken.__assets[self.crypto_pair]
+            response, Kraken.assets[self.crypto_pair]
         )
         return structured_response
 
@@ -85,11 +84,11 @@ class Kraken(ExchangeInterface):
         :return: The bid prices.
         :rtype: List[Dict[str, float]]
         """
-        complete_url = Kraken.__price_url.format(Kraken.__assets[self.crypto_pair])
+        complete_url = Kraken.price_url.format(Kraken.assets[self.crypto_pair])
         response = await request_helper(complete_url, "GET")
         response = [
             {"price": float(bid[0]), "amount": float(bid[1])}
-            for bid in response["result"][Kraken.__assets[self.crypto_pair]]["bids"]
+            for bid in response["result"][Kraken.assets[self.crypto_pair]]["bids"]
         ]
         return response
 
@@ -100,11 +99,11 @@ class Kraken(ExchangeInterface):
         :return: The ask prices.
         :rtype: List[Dict[str, float]]
         """
-        complete_url = Kraken.__price_url.format(Kraken.__assets[self.crypto_pair])
+        complete_url = Kraken.price_url.format(Kraken.assets[self.crypto_pair])
         response = await request_helper(complete_url, "GET")
         response = [
             {"price": float(ask[0]), "amount": float(ask[1])}
-            for ask in response["result"][Kraken.__assets[self.crypto_pair]]["asks"]
+            for ask in response["result"][Kraken.assets[self.crypto_pair]]["asks"]
         ]
         return response
 
@@ -118,12 +117,7 @@ class Kraken(ExchangeInterface):
         """
         data = {"nonce": str(int(1000 * time.time()))}
         headers = cls.get_authorization_headers(data)
-        if not headers:
-            return Response(
-                content={"Error while fetching kraken authorization details."},
-                status_code=500,
-            )
-        response = await request_helper(cls.__balances_url, "POST", headers, data)
+        response = await request_helper(cls.balances_url, "POST", headers, data)
         return response["result"]
 
     @classmethod
@@ -143,11 +137,11 @@ class Kraken(ExchangeInterface):
             logger.exception(
                 "Kraken keys needs to be set to be able to make the API call."
             )
-            return None
+            raise APIKeyError(
+                status_code=500,
+                detail="Kraken keys needs to be set to be able to make the API call.",
+            )
         signature = cls.get_signature(KRAKEN_BALANCES_POSTFIX, data, secret_key)
-        if not signature:
-            logger.warning("Error while building kraken signature.")
-            return None
         return {"API-Key": api_key, "API-Sign": signature}
 
     @classmethod
@@ -171,7 +165,13 @@ class Kraken(ExchangeInterface):
 
             mac = hmac.new(base64.b64decode(secret), message, hashlib.sha512)
             sigdigest = base64.b64encode(mac.digest())
+        except TypeError:
+            logger.exception("Error while serializing kraken data.")
+            raise TypeError("Error while serializing kraken data.")
         except Exception:
             logger.exception("Encountered error while building kraken signature.")
-            return None
+            raise SignatureError(
+                status_code=500,
+                detail="Error encountered while building gemini signature and payload.",
+            )
         return sigdigest.decode()

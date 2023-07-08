@@ -95,19 +95,12 @@ async def get_supported_exchanges(crypto: str) -> List[Type[ExchangeInterface]]:
     :return: The supported exchanges.
     :rtype: List[Type[ExchangeInterface]]
     """
-    try:
-        assets = await get_assets()
-        exchanges = []
-        for exchange in EXCHANGE_MAP:
-            exchange_name = EXCHANGE_MAP[exchange]
-            if crypto in assets[exchange_name]:
-                exchanges.append(exchange)
-
-    except Exception:
-        logger.exception("Encountered exception while fetching supported assets.")
-        raise FetchAssetsError(
-            "Error while fetching the supported assets from exchanges."
-        )
+    assets = await get_assets()
+    exchanges = []
+    for exchange in EXCHANGE_MAP:
+        exchange_name = EXCHANGE_MAP[exchange]
+        if crypto in assets[exchange_name]:
+            exchanges.append(exchange)
 
     return exchanges
 
@@ -184,17 +177,11 @@ async def get_sorted_exchange_prices(
     :return: The sorted exchange prices.
     :rtype: List[Dict[str, Any]]
     """
-    try:
-        prices = (
-            await exchange(crypto).get_bid_price()
-            if is_buying_price
-            else await exchange(crypto).get_ask_price()
-        )
-    except Exception:
-        logger.exception("Encountered exception while fetching the bid and ask prices.")
-        raise FetchPricesError(
-            f"Error while fetching the bid and ask prices of {crypto.value} from exchanges."
-        )
+    prices = (
+        await exchange(crypto).get_bid_price()
+        if is_buying_price
+        else await exchange(crypto).get_ask_price()
+    )
     sort_prices(prices, is_buying_price)
     return prices
 
@@ -216,11 +203,3 @@ async def get_balance_details(exchange):
         if exchange == EXCHANGE_MAP[exchange_class]:
             response = await exchange_class.get_balance_details()
     return response
-
-
-class FetchAssetsError(Exception):
-    pass
-
-
-class FetchPricesError(Exception):
-    pass

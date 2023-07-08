@@ -5,8 +5,6 @@ from models.schemas import Crypto, ViewType
 from .utils import (
     get_consolidated_prices,
     get_all_exchanges_prices,
-    FetchAssetsError,
-    FetchPricesError,
 )
 from slowapi.errors import RateLimitExceeded
 from slowapi import Limiter
@@ -34,14 +32,7 @@ async def get_prices(
     :rtype: dict
     """
     if view == ViewType.consolidated:
-        try:
-            buying_price, selling_price = await get_consolidated_prices(
-                crypto, quantity
-            )
-        except FetchAssetsError as e:
-            return Response(content=str(e), status_code=500)
-        except FetchPricesError as e:
-            return Response(content=str(e), status_code=500)
+        buying_price, selling_price = await get_consolidated_prices(crypto, quantity)
         return {
             "crypto": crypto,
             "quantity": quantity,
@@ -49,12 +40,7 @@ async def get_prices(
             "selling_price": selling_price,
         }
     elif view == ViewType.individual:
-        try:
-            prices = await get_all_exchanges_prices(crypto, quantity)
-        except FetchAssetsError as e:
-            return Response(content=str(e), status_code=500)
-        except FetchPricesError as e:
-            return Response(content=str(e), status_code=500)
+        prices = await get_all_exchanges_prices(crypto, quantity)
         response = {
             "crypto": crypto,
             "quantity": quantity,

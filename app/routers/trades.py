@@ -6,8 +6,6 @@ from .utils import (
     get_consolidated_prices,
     get_all_exchanges_trades,
     get_all_exchanges_prices,
-    FetchAssetsError,
-    FetchPricesError,
 )
 from slowapi.errors import RateLimitExceeded
 from slowapi import Limiter
